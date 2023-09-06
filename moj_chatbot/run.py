@@ -1,6 +1,7 @@
 from flask import Flask, request, abort
 from flask_restx import Resource, Api, fields
 from model import ChatbotModel
+from waitress import serve
 
 
 app = Flask(__name__)
@@ -84,4 +85,5 @@ class QueryTopK(Resource):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=7000, debug=True)
+    # app.run(host="0.0.0.0", port=7000, debug=True)
+    serve(app=app, host="0.0.0.0", port=7000)
