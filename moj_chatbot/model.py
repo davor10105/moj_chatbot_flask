@@ -56,7 +56,7 @@ class ChatbotModel:
         key_embs = torch.cat(self.intent_vectors)
         query_emb = self.extractor([question], return_tensors=True)[0][:, 0]
         scores = F.normalize(query_emb) @ F.normalize(key_embs).T
-        scores = scores[0]
+        scores = (scores[0] + 1) / 2
         sorted_indices = torch.argsort(scores, descending=True)[:top_k]
         retval = []
         for index in sorted_indices:
