@@ -1,17 +1,18 @@
 import os
 import pickle
-import torch
-import torch.nn.functional as F
-from transformers import pipeline
+import numpy as np
+from sentence_transformers import SentenceTransformer, util
+
+
+def normalize_vector(vec):
+    return vec / (np.linalg.norm(vec, axis=-1, keepdims=True) + 1e-9)
 
 
 class ChatbotModel:
     def __init__(self):
-        self.intent_vectors, self.intent_labels = [], []
-        self.extractor = pipeline(
-            # model="data/paraphrase_model",
-            model="sentence-transformers/paraphrase-multilingual-mpnet-base-v2",
-            task="feature-extraction",
+        self.intent_vectors, self.intent_labels = {}, {}
+        self.model = SentenceTransformer(
+            "paraphrase-multilingual-MiniLM-L12-v2",
         )
         self.load()
 
@@ -24,11 +25,17 @@ class ChatbotModel:
         Returns:
             None
         """
-        self.intent_vectors, self.intent_labels = [], []
-        for intent_example in intent_examples:
-            emb = self.extractor([intent_example[1]], return_tensors=True)[0][:, 0]
-            self.intent_vectors.append(emb)
-            self.intent_labels.append(intent_example[0])
+        for system_id in intent_examples:
+            self.intent_vectors[system_id] = []
+            self.intent_labels[system_id] = []
+            for intent_example in intent_examples[system_id]:
+                emb = self.model.encode([intent_example[1]])
+                self.intent_vectors[system_id].append(emb)
+                self.intent_labels[system_id].append(intent_example[0])
+            if len(self.intent_vectors[system_id]) > 0:
+                self.intent_vectors[system_id] = np.concatenate(
+                    self.intent_vectors[system_id]
+                )
         self.persist()
 
     def persist(self) -> None:
@@ -46,20 +53,20 @@ class ChatbotModel:
             with open(os.path.join("data/intent_labels.pickle"), "rb") as f:
                 self.intent_labels = pickle.load(f)
 
-        except ValueError:
-            self.intent_vectors = []
-            self.intent_vectors = []
+        except:
+            self.intent_vectors = {}
+            self.intent_labels = {}
 
-    def query(self, question, top_k):
+    def query(self, system_id, question, top_k):
         """Queries the chatbot"""
 
-        key_embs = torch.cat(self.intent_vectors)
-        query_emb = self.extractor([question], return_tensors=True)[0][:, 0]
-        scores = F.normalize(query_emb) @ F.normalize(key_embs).T
+        key_embs = self.intent_vectors[system_id]
+        query_emb = self.model.encode([question])
+        scores = util.dot_score(normalize_vector(query_emb), normalize_vector(key_embs))
         scores = scores[0]
-        sorted_indices = torch.argsort(scores, descending=True)[:top_k]
+        sorted_indices = np.argsort(-scores)[:top_k]
         retval = []
         for index in sorted_indices:
-            retval.append((self.intent_labels[index], scores[index].item()))
+            retval.append((self.intent_labels[system_id][index], scores[index].item()))
 
         return retval
