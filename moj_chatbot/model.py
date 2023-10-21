@@ -63,7 +63,7 @@ class ChatbotModel:
         key_embs = self.intent_vectors[system_id]
         query_emb = self.model.encode([question])
         scores = util.dot_score(normalize_vector(query_emb), normalize_vector(key_embs))
-        scores = scores[0]
+        scores = (scores[0] + 1) / 2
         sorted_indices = np.argsort(-scores)[:top_k]
         retval = []
         for index in sorted_indices:
