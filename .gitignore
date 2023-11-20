@@ -2,4 +2,4 @@ env
 moj_chatbot/data/paraphrase_model
 __pycache__
 .vscode
-data/*.pickle
+moj_chatbot/data/*.pickle
