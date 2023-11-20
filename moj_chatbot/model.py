@@ -2,7 +2,7 @@ import os
 import pickle
 import numpy as np
 from sentence_transformers import SentenceTransformer, util
-import unicodedata
+from unidecode import unidecode
 
 
 def normalize_vector(vec):
@@ -35,9 +35,8 @@ class ChatbotModel:
                 self.intent_vectors[system_id].append(emb)
                 self.intent_labels[system_id].append(intent_example[0])
                 # embedding without diacritics
-                emb = self.model.encode(
-                    [unicodedata.normalize("NFKD", intent_example[1])]
-                )
+                print(unidecode(intent_example[1]))
+                emb = self.model.encode([unidecode(intent_example[1])])
                 self.intent_vectors[system_id].append(emb)
                 self.intent_labels[system_id].append(intent_example[0])
             if len(self.intent_vectors[system_id]) > 0:
