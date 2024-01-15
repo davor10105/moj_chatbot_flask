@@ -27,6 +27,8 @@ question_model = api.model(
 intent_question_model = api.model(
     "IntentQuestion",
     {
+        "IntentID": fields.String,
+        "QuestionID": fields.String,
         "QuestionText": fields.String,
     },
 )
@@ -40,9 +42,10 @@ predicted_intent = api.model(
 resource_fields = api.model(
     "Intent",
     {
-        "IntentID": fields.String,
         "SystemID": fields.String,
-        "Questions": fields.List(fields.Nested(intent_question_model)),
+        "AddedItems": fields.List(fields.Nested(intent_question_model)),
+        "EditedItems": fields.List(fields.Nested(intent_question_model)),
+        "DeletedItems": fields.List(fields.Nested(intent_question_model)),
     },
 )
 
@@ -54,17 +57,7 @@ class Train(Resource):
     def post(self):
         try:
             data = request.get_json()
-            intent_examples = {}
-            for intent_example in data:
-                intent_id = intent_example["IntentID"]
-                system_id = intent_example["SystemID"]
-                for question_example in intent_example["Questions"]:
-                    if system_id not in intent_examples:
-                        intent_examples[system_id] = []
-                    intent_examples[system_id].append(
-                        (intent_id, question_example["QuestionText"])
-                    )
-            model.train(intent_examples)
+            model.train(data)
             return "Success", 200
         except Exception as e:
             abort(400, str(e))
