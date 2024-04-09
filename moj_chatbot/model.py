@@ -4,6 +4,8 @@ import numpy as np
 from sentence_transformers import SentenceTransformer, util
 from unidecode import unidecode
 import copy
+import psycopg2
+from postgres_secrets import *
 
 
 def normalize_vector(vec):
@@ -67,7 +69,43 @@ class ChatbotModel:
                 self.embedding_db = pickle.load(f)
 
         except:
-            self.embedding_db = {}
+            # self.embedding_db = {}
+            self.reload()
+
+    def reload(self):
+        conn = psycopg2.connect(
+            dbname=DBNAME,
+            user=USER,
+            password=PASSWORD,
+            host=HOST,
+            port=PORT,
+        )
+        cur = conn.cursor()
+        cur.execute(f"SELECT default_version, system_id FROM versions")
+        default_versions = cur.fetchall()
+        for default_version in default_versions:
+            cur.execute(
+                f"SELECT question_id, question, intent_id from questions_{default_version[1]}_{default_version[0]}"
+            )
+            questions = cur.fetchall()
+            formatted_questions = []
+            for question in questions:
+                formatted_question = {
+                    "IntentID": question[2],
+                    "QuestionID": question[0],
+                    "QuestionText": question[1],
+                }
+                formatted_questions.append(formatted_question)
+            self.train(
+                {
+                    "SystemID": default_version[1],
+                    "AddedItems": formatted_questions,
+                    "EditedItems": [],
+                    "DeletedItems": [],
+                }
+            )
+        cur.close()
+        conn.close()
 
     def query(self, system_id, question, top_k):
         """Queries the chatbot"""
@@ -87,13 +125,13 @@ class ChatbotModel:
         scores = (scores[0] + 1) / 2
         sorted_indices = np.argsort(-scores)
         retval = []
-        currentIntent = None
+        currentIntent = set()
         currentIntentNum = 0
         for index in sorted_indices:
             selectedIntent = intent_ids[index]
-            if currentIntent is None or currentIntent != selectedIntent:
+            if len(currentIntent) == 0 or selectedIntent not in currentIntent:
                 retval.append((selectedIntent, scores[index].item()))
-                currentIntent = selectedIntent
+                currentIntent.add(selectedIntent)
                 currentIntentNum += 1
             if currentIntentNum == top_k:
                 break
