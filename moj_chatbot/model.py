@@ -97,12 +97,14 @@ class ChatbotModel:
                 }
                 formatted_questions.append(formatted_question)
             self.train(
-                {
-                    "SystemID": default_version[1],
-                    "AddedItems": formatted_questions,
-                    "EditedItems": [],
-                    "DeletedItems": [],
-                }
+                [
+                    {
+                        "SystemID": default_version[1],
+                        "AddedItems": formatted_questions,
+                        "EditedItems": [],
+                        "DeletedItems": [],
+                    }
+                ]
             )
         cur.close()
         conn.close()
