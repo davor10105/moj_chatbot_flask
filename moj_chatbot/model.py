@@ -84,22 +84,24 @@ class ChatbotModel:
         cur.execute(f"SELECT default_version, system_id FROM versions")
         default_versions = cur.fetchall()
         for default_version in default_versions:
+            version_date, system_id = default_version
+            version_date, system_id = str(version_date), str(system_id)
             cur.execute(
-                f"SELECT question_id, question, intent_id from questions_{default_version[1]}_{default_version[0]}"
+                f"SELECT question_id, question, intent_id from questions_{system_id}_{version_date}"
             )
             questions = cur.fetchall()
             formatted_questions = []
             for question in questions:
                 formatted_question = {
-                    "IntentID": question[2],
-                    "QuestionID": question[0],
-                    "QuestionText": question[1],
+                    "IntentID": str(question[2]),
+                    "QuestionID": str(question[0]),
+                    "QuestionText": str(question[1]),
                 }
                 formatted_questions.append(formatted_question)
             self.train(
                 [
                     {
-                        "SystemID": default_version[1],
+                        "SystemID": system_id,
                         "AddedItems": formatted_questions,
                         "EditedItems": [],
                         "DeletedItems": [],
